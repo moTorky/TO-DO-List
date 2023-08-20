@@ -12,18 +12,18 @@ function input_snatize($string){
 if (empty($_GET['id'])) {
     header("Location: index.php");
 }
-    $task_id= input_snatize($_GET['id']);
-    // echo $task_id;
-    $query = $conn->prepare('SELECT * FROM `tasks` WHERE `task_id`='.$task_id);
-    $query->execute();
-    $task = $query->fetchAll(PDO::FETCH_ASSOC); 
-    // var_dump($task);
-    $query = $conn->prepare('SELECT * FROM `tasks` WHERE `parent_task_id`='.$task_id);
-    $query->execute();
-    $sub_tasks = $query->fetchAll(PDO::FETCH_ASSOC); 
+$user_id=$_SESSION['user_id'];
+$task_id= input_snatize($_GET['id']);
+// echo $task_id;
+$query = $conn->prepare('SELECT * FROM `tasks` WHERE `task_id`='.$task_id.' AND user_id='.$user_id);
+$query->execute();
+$task = $query->fetchAll(PDO::FETCH_ASSOC); 
+// var_dump($task);
+$query = $conn->prepare('SELECT * FROM `tasks` WHERE `parent_task_id`='.$task_id);
+$query->execute();
+$sub_tasks = $query->fetchAll(PDO::FETCH_ASSOC); 
     // var_dump($sub_tasks);
 
-    $user_id=$_SESSION['user_id'];
 
 
     if (!empty($_GET['id']) && !empty($_POST['action'])  && $_POST['action'] == 'insert') {
@@ -65,6 +65,47 @@ if (empty($_GET['id'])) {
                 $errors['insert'] = 'task insert sucsfully';
             }else{
                 $errors['insert'] = 'can\'t insert task';
+            }
+            header("Location: viewTask.php?id=".$task_id);
+            // echo $result;
+        }catch(Exception $e){
+            // echo "<div class='alert alert-danger'>" . $e->getMessage() . "</div>";
+        }
+    }
+    if (!empty($_POST['task_id']) && !empty($_POST['action'])  && $_POST['action'] == 'edit_sub' && !empty($_POST['task_name'])) {
+        $id= input_snatize($_POST['task_id']);
+        $task_name = input_snatize($_POST['task_name']);
+        $status=0;
+        if(isset($_POST['task_status']) && $_POST['task_status']=='on'){
+            $status=2;
+        }
+        try{
+            //INSERT INTO `tasks`(`user_id`, `task_id`, `task_name`, `parent_task_id`, `due_date`, `status`) VALUES 
+            //('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]','[value-6]')
+            $query= $conn->prepare('UPDATE `tasks` SET `task_name`=?, `status`=? WHERE `task_id`=?');
+            $result = $query->execute([$task_name, $status, $id]);
+            if ($result){
+                $errors['update'] = 'task update sub sucsfully';
+            }else{
+                $errors['update'] = 'can\'t update sub task';
+            }
+            header("Location: viewTask.php?id=".$task_id);
+            // echo $result;
+        }catch(Exception $e){
+            // echo "<div class='alert alert-danger'>" . $e->getMessage() . "</div>";
+        }
+    }
+    if (!empty($_POST['task_id']) && !empty($_POST['action'])  && $_POST['action'] == 'delete_sub') {
+        $id= input_snatize($_POST['task_id']);
+        try{
+            //INSERT INTO `tasks`(`user_id`, `task_id`, `task_name`, `parent_task_id`, `due_date`, `status`) VALUES 
+            //('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]','[value-6]')
+            $query= $conn->prepare('DELETE FROM `tasks` WHERE `task_id`=?');
+            $result = $query->execute([$id]);
+            if ($result){
+                $errors['update'] = ' sub task delted sucsfully';
+            }else{
+                $errors['update'] = 'can\'t delete sub task';
             }
             header("Location: viewTask.php?id=".$task_id);
             // echo $result;
@@ -182,52 +223,40 @@ if (empty($_GET['id'])) {
             <div class="col mx-auto">
                 <!-- Todo Item 1 -->
                 <?php foreach ($sub_tasks as $task){ ?>
-                <div class="row px-3 align-items-center todo-item rounded">
-                    <div class="col-auto m-1 p-0 d-flex align-items-center">
-                        <h2 class="m-0 p-0">
-                            <i class="fa fa-square-o text-primary btn m-0 p-0 d-none" data-toggle="tooltip" data-placement="bottom" title="Mark as complete"></i>
-                            <i class="fa <?php if($task['status'] != 2)echo 'fa-square-o'; else echo 'fa-check-square-o'?> text-primary btn m-0 p-0" data-toggle="tooltip" data-placement="bottom" title="Mark as todo"></i>
-                        </h2>
-                    </div>
-                    <div class="col px-1 m-1 d-flex align-items-center">
-                        <input type="text" class="form-control form-control-lg border-0 edit-todo-input bg-transparent rounded px-3" readonly value="<?php echo $task['task_name'];?>" title="<?php echo $task['task_name'];?>" />
-                        <input type="text" class="form-control form-control-lg border-0 edit-todo-input rounded px-3 d-none" value="<?php echo $task['task_name'];?>" />
-                    </div>
-                    <div class="col-auto m-1 p-0 px-3 d-none">
-                    </div>
-                    <div class="col-auto m-1 p-0 todo-actions">
-                        <div class="row d-flex align-items-center justify-content-end">
-                            <form action="viewTask.php" method="post">
-                                <h5 class="m-0 p-0 px-2">
-                                    <input type="text" name="action" id="" value="update" hidden>
-                                    <input type="text" name="task_id" id="" value=<?php echo $task['task_id'];?> hidden>
-                                    <button type="submit">
-                                    <i class="fa fa-pencil text-info btn m-0 p-0" data-toggle="tooltip" data-placement="bottom" title="Edit todo"></i>
-                                    </button>
-                                </h5>
-                            </form>
-                            <form action="viewTask.php" method="post">
-                                <h5 class="m-0 p-0 px-2">
-                                    <input type="text" name="action" id="" value="delete" hidden>
-                                    <input type="text" name="task_id" id="" value=<?php echo $task['task_id'];?> hidden>
-                                    <button type="submit">
-                                    <i class="fa fa-trash-o text-danger btn m-0 p-0" data-toggle="tooltip" data-placement="bottom" title="Delete todo"></i>
-                                    </button>
-                                </h5>
-                            </form>
-                        </div>
-                        <div class="row todo-created-info">
-                            <div class="col-auto d-flex align-items-center pr-2">
-                                <i class="fa fa-info-circle my-2 px-2 text-black-50 btn" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Created date"></i>
-                                <label class="date-label my-2 text-black-50"><?php echo $task['due_date'];?></label>
+                    <form action="viewTask.php?id=<?php echo $task_id;?>" method="post">
+                        <div class="row px-3 align-items-center todo-item rounded">
+                            <div class="col-auto m-1 p-0 d-flex align-items-center">
+                                <h2 class="m-0 p-0">
+                                <!-- <i class="fa fa-square-o text-primary btn m-0 p-0 d-none" data-toggle="tooltip" data-placement="bottom" title="Mark as complete"></i>
+                                <i class="fa <?php if($task['status'] != 2)echo 'fa-square-o'; else echo 'fa-check-square-o'?> text-primary btn m-0 p-0" data-toggle="tooltip" data-placement="bottom" title="Mark as todo"></i> -->
+                                    <!-- Hidden input to send the task ID (assuming you have a task ID) -->
+                                    <input type="hidden" name="task_id" value="<?php echo $task['task_id']; ?>">
+                                    
+                                    <input type="checkbox" name="task_status" <?php if ($task['status'] == 2) echo 'checked'; ?>>
+                                </h2>
                             </div>
-                        </div>
-                    </div>
-                </div>
+                            <div class="col px-1 m-1 d-flex align-items-center">
+                                <input type="text" class="form-control form-control-lg border-0 edit-todo-input bg-transparent rounded px-3" name='task_name'  value="<?php echo $task['task_name'];?>" title="<?php echo $task['task_name'];?>" />
+                            </div>
+                                <div class="col-auto d-flex px-1 m-1 d-flex align-items-center">
+                                    <h5 class="m-0 p-0 px-2">
+                                        <button type="submit" name='action' value="edit_sub">
+                                            <i class="fa fa-pencil text-info btn m-0 p-0" data-toggle="tooltip" data-placement="bottom" title="Edit sub task"></i>
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div class="col-auto d-flex align-items-center px-1 m-1 d-flex align-items-center">
+                                    <h5 class="m-0 p-0 px-2">
+                                        <button type="submit" name='action' value="delete_sub">
+                                            <i class="fa fa-trash-o text-danger btn m-0 p-0" data-toggle="tooltip" data-placement="bottom" title="Delete sub task"></i>
+                                        </button>
+                                    </h5>
+                                </div>
+                    </form>
                 <?php } ?>
             </div>
         </div>
     </div>
-
+        
     
     <?php include './inc/footer.php'?>

@@ -9,6 +9,7 @@ function input_snatize($string){
     return htmlspecialchars(trim($string), ENT_QUOTES, 'UTF-8');
 }
 
+
 if (isset($_POST['username']) && isset($_POST['pass'])){
     $error=[];
     $username = input_snatize($_POST['username']);
@@ -126,6 +127,7 @@ if (isset($_POST['username']) && isset($_POST['pass'])){
     }
     ?>
   </form>
+  <a href="register.php"><button style="background:#007bff;">Register Here!</button></a>
 </div>
 </body>
 </html>
